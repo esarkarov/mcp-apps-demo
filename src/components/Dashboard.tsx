@@ -1,6 +1,6 @@
 import type { App } from "@modelcontextprotocol/ext-apps";
 import { useMemo, useState } from "react";
-import { PERIOD_OPTIONS, TABS } from "../constants";
+import { NO_FILTER, PERIOD_OPTIONS, TABS } from "../constants";
 import { useTransactions } from "../hooks/useTransactions";
 import { createApi } from "../lib/api";
 import { errorMessage } from "../lib/errors";
@@ -8,8 +8,6 @@ import { formatEur } from "../lib/format";
 import type { Insight, Overview, Tab, Txn, TxnFilter } from "../types";
 import { OverviewTab } from "./OverviewTab";
 import { TransactionsTab } from "./TransactionsTab";
-
-const NO_FILTER: TxnFilter = { query: "" };
 
 export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
   const api = useMemo(() => createApi(app), [app]);

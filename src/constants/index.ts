@@ -1,8 +1,10 @@
-import type { DisputeReason, Tab } from "../types";
+import type { DisputeReason, Tab, TxnFilter } from "../types";
 
 export const PERIOD_OPTIONS = [3, 6] as const;
 
 export const ICON = { warning: "⚠", info: "ⓘ" } as const;
+
+export const NO_FILTER: TxnFilter = { query: "" };
 
 export const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },

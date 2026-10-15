@@ -1,14 +1,8 @@
 import { useMemo, useRef, useState, type SyntheticEvent } from "react";
 import { formatEur, formatMonth } from "../lib/format";
-import type { MonthTotals } from "../types";
+import type { MonthTotals, Tooltip } from "../types";
 import { layoutChart } from "../lib/chartLayout";
 import { CHART } from "../constants";
-
-interface Tooltip {
-  x: number;
-  y: number;
-  text: string;
-}
 
 export function MonthlyChart({ data }: { data: MonthTotals[] }) {
   const [showTable, setShowTable] = useState(false);

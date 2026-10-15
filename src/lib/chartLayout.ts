@@ -1,23 +1,6 @@
 import { CHART } from "../constants";
 import { formatEur, formatMonth } from "../lib/format";
-import type { MonthTotals } from "../types";
-
-export interface BarSpec {
-  key: string;
-  className: "s1" | "s2";
-  label: string;
-  path: string;
-}
-export interface GroupSpec {
-  month: string;
-  label: string;
-  centerX: number;
-  bars: BarSpec[];
-}
-export interface ChartLayout {
-  ticks: { value: number; y: number; label: string }[];
-  groups: GroupSpec[];
-}
+import type { ChartLayout, GroupSpec, MonthTotals } from "../types";
 
 function barPath(
   x: number,

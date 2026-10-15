@@ -1,13 +1,12 @@
 import { formatEur, formatEurRounded } from "../lib/format";
 import type { CategoryTotal } from "../types";
 
-export function CategoryBars({
-  categories,
-  onSelect,
-}: {
+interface CategoryBarsProps {
   categories: CategoryTotal[];
   onSelect: (category: string) => void;
-}) {
+}
+
+export function CategoryBars({ categories, onSelect }: CategoryBarsProps) {
   const max = categories[0]?.total ?? 1;
   return (
     <section className="card" aria-label="Spending by category">

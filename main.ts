@@ -1,9 +1,3 @@
-/**
- * Entry point for running the MCP server.
- * Run with: npx @modelcontextprotocol/server-basic-react
- * Or: node dist/index.js [--stdio]
- */
-
 import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import type { McpServer } from "@modelcontextprotocol/server";
@@ -12,11 +6,6 @@ import cors from "cors";
 import type { Request, Response } from "express";
 import { createServer } from "./server.js";
 
-/**
- * Starts an MCP server with Streamable HTTP transport in stateless mode.
- *
- * @param createServer - Factory function that creates a new McpServer instance per request.
- */
 export async function startStreamableHTTPServer(
   createServer: () => McpServer,
 ): Promise<void> {
@@ -68,11 +57,6 @@ export async function startStreamableHTTPServer(
   process.on("SIGTERM", shutdown);
 }
 
-/**
- * Starts an MCP server with stdio transport.
- *
- * @param createServer - Factory function that creates a new McpServer instance.
- */
 export async function startStdioServer(
   createServer: () => McpServer,
 ): Promise<void> {

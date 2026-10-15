@@ -6,6 +6,7 @@ export type DisputeReason =
   | "wrong-amount"
   | "other";
 
+export type Tab = "overview" | "transactions";
 export interface Insight {
   kind: InsightKind;
   severity: Severity;
@@ -74,4 +75,25 @@ export interface TxnFilter {
   query: string;
 }
 
-export type Tab = "overview" | "transactions";
+export interface Tooltip {
+  x: number;
+  y: number;
+  text: string;
+}
+
+export interface BarSpec {
+  key: string;
+  className: "s1" | "s2";
+  label: string;
+  path: string;
+}
+export interface GroupSpec {
+  month: string;
+  label: string;
+  centerX: number;
+  bars: BarSpec[];
+}
+export interface ChartLayout {
+  ticks: { value: number; y: number; label: string }[];
+  groups: GroupSpec[];
+}
