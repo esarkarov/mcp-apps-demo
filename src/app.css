@@ -360,6 +360,28 @@ option {
 .error {
   color: var(--bad);
 }
+.dlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.dlist li {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  border-top: 1px solid var(--line);
+  padding: 8px 4px;
+}
+.dlist li:first-child {
+  border-top: 0;
+}
+.dhead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
 @media (max-width: 520px) {
   .trow {
     grid-template-columns: 3.6em 1fr 5.5em;

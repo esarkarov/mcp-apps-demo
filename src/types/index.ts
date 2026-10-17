@@ -6,7 +6,8 @@ export type DisputeReason =
   | "wrong-amount"
   | "other";
 
-export type Tab = "overview" | "transactions";
+export type Tab = "overview" | "transactions" | "disputes";
+
 export interface Insight {
   kind: InsightKind;
   severity: Severity;
@@ -42,12 +43,14 @@ export interface Overview {
   byMonth: MonthTotals[];
   byCategory: CategoryTotal[];
   insights: Insight[];
+  view?: Tab;
 }
 
 export interface Dispute {
   caseId: string;
   reason: DisputeReason;
   comment: string;
+  openedAt?: string;
 }
 
 export interface Txn {

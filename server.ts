@@ -299,6 +299,11 @@ export function overview(months: number) {
 
 let caseSeq = 0;
 
+const disputedTransactions = () =>
+  txns
+    .filter((t) => t.dispute)
+    .sort((a, b) => (a.dispute!.openedAt < b.dispute!.openedAt ? 1 : -1));
+
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "Spending Insights Demo",
@@ -314,7 +319,8 @@ export function createServer(): McpServer {
       description:
         "Shows the customer's income and spending as an interactive view: monthly trend, spending by category, transactions, and items worth a look " +
         "(possible duplicate charges, price increases, unusually large payments). Use for questions about spending, budget, or suspicious card activity. " +
-        "Demo data only. Disputing a transaction can only be done by the customer inside the interactive view; you cannot do it on their behalf.",
+        "Demo data only. For questions about existing dispute cases use show-disputes instead. " +
+        "Disputing a transaction can only be done by the customer inside the interactive view; you cannot do it on their behalf.",
       inputSchema: z.object({
         months: z
           .number()
@@ -340,10 +346,60 @@ export function createServer(): McpServer {
         (o.insights.length
           ? `Items worth a look:\n${o.insights.map((i) => `- ${i.title}. ${i.detail}`).join("\n")}`
           : "Nothing unusual found.") +
-        `\nDisputes are made by the customer in the interactive view; they are not available as a chat action.`;
+        `\nThe customer opens disputes in the interactive view; they are not available as a chat action.`;
       return {
         content: [{ type: "text", text }],
         structuredContent: o as unknown as Record<string, unknown>,
+      };
+    },
+  );
+
+  registerAppTool(
+    server,
+    "show-disputes",
+    {
+      title: "Show disputes",
+      description:
+        "Shows the customer's dispute cases (reference, merchant, amount, date, reason) as an interactive view. " +
+        "Use for questions about disputed payments or dispute cases. Read-only: you cannot open or change a dispute.",
+      inputSchema: z.object({}),
+      _meta: { ui: { resourceUri } },
+    },
+    async (): Promise<CallToolResult> => {
+      const list = disputedTransactions();
+      const text = list.length
+        ? `Dispute cases:\n${list
+            .map(
+              (t) =>
+                `- ${t.dispute!.caseId}: ${t.merchant} ${Math.abs(t.amount).toFixed(2)} EUR on ${t.date}, reason ${t.dispute!.reason}${t.dispute!.comment ? ` (${t.dispute!.comment})` : ""}`,
+            )
+            .join("\n")}`
+        : "No dispute cases have been opened.";
+      return {
+        content: [{ type: "text", text }],
+        structuredContent: {
+          ...overview(6),
+          view: "disputes",
+        } as unknown as Record<string, unknown>,
+      };
+    },
+  );
+
+  registerAppTool(
+    server,
+    "get-disputes",
+    {
+      title: "Get disputes",
+      description:
+        "Returns all dispute cases, newest first (used by the widget).",
+      inputSchema: z.object({}),
+      _meta: { ui: { resourceUri, visibility: ["app"] } },
+    },
+    async (): Promise<CallToolResult> => {
+      const list = disputedTransactions();
+      return {
+        content: [{ type: "text", text: `${list.length} disputes` }],
+        structuredContent: { disputes: list },
       };
     },
   );

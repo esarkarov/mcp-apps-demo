@@ -1,7 +1,7 @@
 import type { App } from "@modelcontextprotocol/ext-apps";
+import { TOOL } from "../constants";
 import { formatEur } from "./format";
 import type { Dispute, DisputeReason, Overview, Txn, TxnQuery } from "../types";
-import { TOOL } from "../constants";
 
 export function createApi(app: App) {
   async function call<T>(
@@ -32,6 +32,11 @@ export function createApi(app: App) {
       return transactions;
     },
 
+    async getDisputes(): Promise<Txn[]> {
+      const { disputes } = await call<{ disputes: Txn[] }>(TOOL.disputes, {});
+      return disputes;
+    },
+
     async disputeTransaction(input: {
       transactionId: string;
       reason: DisputeReason;
@@ -44,6 +49,10 @@ export function createApi(app: App) {
       return transaction;
     },
 
+    /**
+     * The model cannot see this iframe, so tell it what the customer did.
+     * (See `updateModelContext` in the MCP Apps docs.)
+     */
     reportDispute(t: Txn & { dispute: Dispute }) {
       return app.updateModelContext({
         content: [

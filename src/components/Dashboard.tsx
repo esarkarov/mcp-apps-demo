@@ -8,13 +8,14 @@ import { formatEur } from "../lib/format";
 import type { Insight, Overview, Tab, Txn, TxnFilter } from "../types";
 import { OverviewTab } from "./OverviewTab";
 import { TransactionsTab } from "./TransactionsTab";
+import { DisputesTab } from "./DisputesTab";
 
 export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
   const api = useMemo(() => createApi(app), [app]);
 
   const [overview, setOverview] = useState(initial);
   const [months, setMonths] = useState(initial.months);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(initial.view ?? "overview");
   const [filter, setFilter] = useState<TxnFilter>(NO_FILTER);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -60,6 +61,9 @@ export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
       { ids: i.txnIds, query: "", label: i.title },
       i.txnIds[0] ?? null,
     );
+
+  const openTransaction = (t: Txn) =>
+    openTransactions({ ids: [t.id], query: "", label: t.merchant }, t.id);
 
   const selectTab = (next: Tab) => {
     if (next === "transactions" && tab !== "transactions") {
@@ -128,6 +132,8 @@ export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
           onSelectCategory={showCategory}
           onReviewInsight={reviewInsight}
         />
+      ) : tab === "disputes" ? (
+        <DisputesTab api={api} onOpenTransaction={openTransaction} />
       ) : (
         <TransactionsTab
           api={api}

@@ -9,12 +9,14 @@ export const NO_FILTER: TxnFilter = { query: "" };
 export const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "transactions", label: "Transactions" },
+  { id: "disputes", label: "Disputes" },
 ];
 
 export const TOOL = {
   overview: "get-overview",
   transactions: "get-transactions",
   dispute: "dispute-transaction",
+  disputes: "get-disputes",
 } as const;
 
 export const CHART = {

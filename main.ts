@@ -15,6 +15,18 @@ export async function startStreamableHTTPServer(
   app.use(cors());
 
   app.all("/mcp", async (req: Request, res: Response) => {
+    const calls = Array.isArray(req.body)
+      ? req.body
+      : req.body
+        ? [req.body]
+        : [];
+    for (const c of calls) {
+      if (c?.method)
+        console.log(
+          `[mcp] ${c.method}${c.params?.name ? ` ${c.params.name}` : c.params?.uri ? ` ${c.params.uri}` : ""}`,
+        );
+    }
+
     const server = createServer();
     const transport = new NodeStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
