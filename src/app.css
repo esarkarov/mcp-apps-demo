@@ -1,7 +1,7 @@
 :root {
   color-scheme: light dark;
-  --s1: light-dark(#2a78d6, #3987e5); /* income (categorical slot 1) */
-  --s2: light-dark(#eb6834, #d95926); /* spending (categorical slot 2) */
+  --s1: light-dark(#2a78d6, #3987e5);
+  --s2: light-dark(#eb6834, #d95926);
   --line: color-mix(in srgb, currentColor 18%, transparent);
   --soft: color-mix(in srgb, currentColor 6%, transparent);
   --muted: color-mix(in srgb, currentColor 62%, transparent);
@@ -281,11 +281,16 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 4px 8px;
-  background: transparent;
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
 }
 input[type="range"] {
   flex: 1;
   min-width: 120px;
+}
+option {
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
 }
 .filters {
   margin-top: 0;

@@ -1,4 +1,9 @@
 import type { McpUiHostContext } from "@modelcontextprotocol/ext-apps";
+import {
+  applyDocumentTheme,
+  applyHostFonts,
+  applyHostStyleVariables,
+} from "@modelcontextprotocol/ext-apps";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -29,6 +34,14 @@ function Root() {
   useEffect(() => {
     if (app) setHostContext(app.getHostContext());
   }, [app]);
+
+  useEffect(() => {
+    if (hostContext?.theme) applyDocumentTheme(hostContext.theme);
+    if (hostContext?.styles?.variables)
+      applyHostStyleVariables(hostContext.styles.variables);
+    if (hostContext?.styles?.css?.fonts)
+      applyHostFonts(hostContext.styles.css.fonts);
+  }, [hostContext]);
 
   if (error)
     return (
