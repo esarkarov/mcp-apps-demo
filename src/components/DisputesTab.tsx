@@ -34,7 +34,7 @@ export function DisputesTab({ api, onOpenTransaction }: DisputesTabProps) {
         {error}
       </Notice>
     );
-  if (disputes === null) return <p className="muted">Loading disputes…</p>;
+  if (disputes === null) return <Notice>Loading disputes…</Notice>;
   if (disputes.length === 0)
     return (
       <p className="muted">
@@ -48,12 +48,20 @@ export function DisputesTab({ api, onOpenTransaction }: DisputesTabProps) {
       {disputes.map((t) => (
         <li key={t.id}>
           <div className="dhead">
-            <strong>{t.dispute?.caseId}</strong>
+            <span>
+              <strong>{t.dispute?.caseId}</strong>
+              <span className="badge">Open</span>
+            </span>
             <span>{formatEur(t.amount)}</span>
           </div>
           <div>
             {t.merchant} <span className="muted">· {formatDay(t.date)}</span>
           </div>
+          {t.dispute?.openedAt && (
+            <div className="muted">
+              Opened {formatDay(t.dispute.openedAt.slice(0, 10))}
+            </div>
+          )}
           <div className="muted">
             {t.dispute && DISPUTE_REASONS[t.dispute.reason]}
             {t.dispute?.comment && ` · ${t.dispute.comment}`}

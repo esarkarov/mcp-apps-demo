@@ -6,13 +6,9 @@ interface NoticeProps {
 
 export function Notice({ kind = "status", children, onRetry }: NoticeProps) {
   return (
-    <div role={kind === "error" ? "alert" : "status"}>
+    <div className="notice" role={kind === "error" ? "alert" : "status"}>
       <p className={kind === "error" ? "error" : "muted"}>{children}</p>
-      {onRetry && (
-        <button onClick={onRetry} className="mb-2">
-          Try again
-        </button>
-      )}
+      {onRetry && <button onClick={onRetry}>Try again</button>}
     </div>
   );
 }

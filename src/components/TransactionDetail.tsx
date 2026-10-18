@@ -73,6 +73,7 @@ export function TransactionDetail({
           <label htmlFor={`reason-${txn.id}`}>Reason</label>
           <select
             id={`reason-${txn.id}`}
+            autoFocus
             value={reason}
             onChange={(e) => setReason(e.target.value as DisputeReason)}
           >

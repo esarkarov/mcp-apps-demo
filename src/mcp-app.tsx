@@ -7,7 +7,7 @@ import {
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import "./app.css";
+import "./styles/app.css";
 import { Dashboard } from "./components/Dashboard";
 import {
   CONNECT_TIMEOUT_MS,

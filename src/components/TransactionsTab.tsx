@@ -1,5 +1,6 @@
 import type { Api } from "../lib/api";
 import type { Txn, TxnFilter } from "../types";
+import { Notice } from "./Notice";
 import { TransactionItem } from "./TransactionItem";
 
 interface TransactionsTabProps {
@@ -78,7 +79,7 @@ export function TransactionsTab({
       )}
 
       {txns === null ? (
-        <p className="muted">Loading transactions…</p>
+        <Notice>Loading transactions…</Notice>
       ) : txns.length === 0 ? (
         <p className="muted">No transactions match.</p>
       ) : (

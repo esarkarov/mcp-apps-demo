@@ -305,6 +305,12 @@ export function overview(months: number) {
   };
 }
 
+const eurFormat = new Intl.NumberFormat("en-IE", {
+  style: "currency",
+  currency: "EUR",
+});
+const eur = (n: number) => eurFormat.format(n);
+
 const disputedTransactions = (user: string): Required<TxnView>[] =>
   listDisputes(user)
     .flatMap(({ transactionId, dispute }) => {
@@ -344,18 +350,18 @@ export function createServer(user: string = DEMO_USER): McpServer {
     async ({ months }): Promise<CallToolResult> => {
       const n = months ?? 6;
       const o = overview(n);
-      // content = text fallback for hosts without MCP Apps (and what the model reads).
       const text =
-        `Last ${n} month(s) for ${o.account.holder} (${o.account.name} ${o.account.mask}, balance ${o.account.balance.toFixed(2)} EUR):\n` +
-        `Income ${o.income.toFixed(2)}, spending ${o.spending.toFixed(2)}, net ${o.net.toFixed(2)}, savings rate ${o.savingsRate}%.\n` +
+        `Spending for ${o.account.holder}, ${o.account.name} ${o.account.mask}, last ${n} month(s). Balance ${eur(o.account.balance)}.\n` +
+        `Income ${eur(o.income)}, spending ${eur(o.spending)}, net ${eur(o.net)}, savings rate ${o.savingsRate}%.\n` +
+        `By month: ${o.byMonth.map((m) => `${m.month} in ${eur(m.income)} / out ${eur(m.spending)}`).join("; ")}.\n` +
         `Top categories: ${o.byCategory
-          .slice(0, 4)
-          .map((c) => `${c.category} ${c.total.toFixed(2)}`)
+          .slice(0, 5)
+          .map((c) => `${c.category} ${eur(c.total)}`)
           .join(", ")}.\n` +
         (o.insights.length
-          ? `Items worth a look:\n${o.insights.map((i) => `- ${i.title}. ${i.detail}`).join("\n")}`
+          ? `Worth a look:\n${o.insights.map((i) => `- ${i.title}. ${i.detail}`).join("\n")}`
           : "Nothing unusual found.") +
-        `\nThe customer opens disputes in the interactive view; they are not available as a chat action.`;
+        `\nDisputes can only be opened by the customer in the interactive view, not from chat.`;
       return {
         content: [{ type: "text", text }],
         structuredContent: o as unknown as Record<string, unknown>,
@@ -377,10 +383,10 @@ export function createServer(user: string = DEMO_USER): McpServer {
     async (): Promise<CallToolResult> => {
       const list = disputedTransactions(user);
       const text = list.length
-        ? `Dispute cases:\n${list
+        ? `Dispute cases (all open):\n${list
             .map(
               (t) =>
-                `- ${t.dispute!.caseId}: ${t.merchant} ${Math.abs(t.amount).toFixed(2)} EUR on ${t.date}, reason ${t.dispute!.reason}${t.dispute!.comment ? ` (${t.dispute!.comment})` : ""}`,
+                `- ${t.dispute.caseId}: ${t.merchant} ${eur(Math.abs(t.amount))} on ${t.date}; reason: ${t.dispute.reason}${t.dispute.comment ? ` ("${t.dispute.comment}")` : ""}; opened ${t.dispute.openedAt.slice(0, 10)}`,
             )
             .join("\n")}`
         : "No dispute cases have been opened.";
@@ -544,9 +550,6 @@ export function createServer(user: string = DEMO_USER): McpServer {
             uri: resourceUri,
             mimeType: RESOURCE_MIME_TYPE,
             text: html,
-            // The widget is one self-contained file and makes no network
-            // requests of its own, so it asks for no external origins and no
-            // browser permissions. Data only flows through the host.
             _meta: {
               ui: {
                 csp: {

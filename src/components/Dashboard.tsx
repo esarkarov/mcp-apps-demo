@@ -108,12 +108,11 @@ export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
         </div>
       </header>
 
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="group" aria-label="View">
         {TABS.map(({ id, label }) => (
           <button
             key={id}
-            role="tab"
-            aria-selected={tab === id}
+            aria-pressed={tab === id}
             className={tab === id ? "on" : ""}
             onClick={() => selectTab(id)}
           >
