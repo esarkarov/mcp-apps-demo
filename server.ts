@@ -12,6 +12,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { DEMO_USER } from "./auth.js";
+import {
+  getDispute,
+  listDisputes,
+  openDispute,
+  type DisputeRecord,
+} from "./disputes.js";
 
 const SERVER_FILE = fileURLToPath(import.meta.url);
 const DIST_DIR = SERVER_FILE.endsWith(".ts")
@@ -38,13 +45,14 @@ interface Txn {
   category: Category;
   amount: number;
   note?: string;
-  dispute?: {
-    caseId: string;
-    reason: string;
-    comment: string;
-    openedAt: string;
-  };
 }
+
+type TxnView = Txn & { dispute?: DisputeRecord };
+
+const TRANSACTION_ID = /^T\d{3,6}$/;
+const MAX_COMMENT_LENGTH = 500;
+const MAX_FILTER_LENGTH = 80;
+const MAX_IDS = 20;
 
 function rng(seed: number) {
   return () => {
@@ -297,14 +305,15 @@ export function overview(months: number) {
   };
 }
 
-let caseSeq = 0;
+const disputedTransactions = (user: string): Required<TxnView>[] =>
+  listDisputes(user)
+    .flatMap(({ transactionId, dispute }) => {
+      const t = txns.find((x) => x.id === transactionId);
+      return t ? [{ ...t, dispute } as Required<TxnView>] : [];
+    })
+    .sort((a, b) => (a.dispute.openedAt < b.dispute.openedAt ? 1 : -1));
 
-const disputedTransactions = () =>
-  txns
-    .filter((t) => t.dispute)
-    .sort((a, b) => (a.dispute!.openedAt < b.dispute!.openedAt ? 1 : -1));
-
-export function createServer(): McpServer {
+export function createServer(user: string = DEMO_USER): McpServer {
   const server = new McpServer({
     name: "Spending Insights Demo",
     version: "1.0.0",
@@ -366,7 +375,7 @@ export function createServer(): McpServer {
       _meta: { ui: { resourceUri } },
     },
     async (): Promise<CallToolResult> => {
-      const list = disputedTransactions();
+      const list = disputedTransactions(user);
       const text = list.length
         ? `Dispute cases:\n${list
             .map(
@@ -396,7 +405,7 @@ export function createServer(): McpServer {
       _meta: { ui: { resourceUri, visibility: ["app"] } },
     },
     async (): Promise<CallToolResult> => {
-      const list = disputedTransactions();
+      const list = disputedTransactions(user);
       return {
         content: [{ type: "text", text: `${list.length} disputes` }],
         structuredContent: { disputes: list },
@@ -429,9 +438,9 @@ export function createServer(): McpServer {
         "Returns transactions for the last N months with optional filters (used by the widget).",
       inputSchema: z.object({
         months: z.number().int().min(1).max(6),
-        category: z.string().optional(),
-        query: z.string().optional(),
-        ids: z.array(z.string()).optional(),
+        category: z.string().max(MAX_FILTER_LENGTH).optional(),
+        query: z.string().max(MAX_FILTER_LENGTH).optional(),
+        ids: z.array(z.string().regex(TRANSACTION_ID)).max(MAX_IDS).optional(),
       }),
       _meta: { ui: { resourceUri, visibility: ["app"] } },
     },
@@ -444,7 +453,11 @@ export function createServer(): McpServer {
         .filter((t) => !q || t.merchant.toLowerCase().includes(q))
         .filter((t) => !ids || ids.includes(t.id))
         .slice(0, 60)
-        .map((t) => ({ ...t, flagged: flagged.has(t.id) }));
+        .map((t) => ({
+          ...t,
+          flagged: flagged.has(t.id),
+          dispute: getDispute(user, t.id),
+        }));
       return {
         content: [{ type: "text", text: `${list.length} transactions` }],
         structuredContent: { transactions: list },
@@ -460,14 +473,14 @@ export function createServer(): McpServer {
       description:
         "Opens a dispute case for one transaction (used by the widget after the customer confirms).",
       inputSchema: z.object({
-        transactionId: z.string(),
+        transactionId: z.string().regex(TRANSACTION_ID),
         reason: z.enum([
           "duplicate",
           "not-recognised",
           "wrong-amount",
           "other",
         ]),
-        comment: z.string().default(""),
+        comment: z.string().max(MAX_COMMENT_LENGTH).default(""),
       }),
       _meta: { ui: { resourceUri, visibility: ["app"] } },
     },
@@ -487,11 +500,12 @@ export function createServer(): McpServer {
             { type: "text", text: "Only card payments can be disputed." },
           ],
         };
-      if (t.dispute)
+      const existing = getDispute(user, t.id);
+      if (existing)
         return {
           isError: true,
           content: [
-            { type: "text", text: `Already disputed (${t.dispute.caseId}).` },
+            { type: "text", text: `Already disputed (${existing.caseId}).` },
           ],
         };
       if (reason === "other" && !comment.trim())
@@ -501,20 +515,15 @@ export function createServer(): McpServer {
             { type: "text", text: "Please add a comment for reason 'other'." },
           ],
         };
-      t.dispute = {
-        caseId: `DSP-${String(++caseSeq).padStart(4, "0")}`,
-        reason,
-        comment: comment.trim(),
-        openedAt: new Date().toISOString(),
-      };
+      const dispute = openDispute(user, t.id, reason, comment.trim());
       return {
         content: [
           {
             type: "text",
-            text: `Dispute ${t.dispute.caseId} opened for ${t.merchant} ${Math.abs(t.amount).toFixed(2)} (${reason}).`,
+            text: `Dispute ${dispute.caseId} opened for ${t.merchant} ${Math.abs(t.amount).toFixed(2)} (${reason}).`,
           },
         ],
-        structuredContent: { transaction: t },
+        structuredContent: { transaction: { ...t, dispute } },
       };
     },
   );
