@@ -43,3 +43,8 @@ export const WHAT_IF_DEFAULT_PERCENT = 20;
 export const WHAT_IF_MAX_PERCENT = 50;
 export const WHAT_IF_STEP_PERCENT = 5;
 export const TXN_FETCH_DEBOUNCE_MS = 150;
+
+export const REQUEST_TIMEOUT_MS = 15_000;
+export const CONNECT_TIMEOUT_MS = 10_000;
+export const FIRST_RESULT_WAIT_MS = 3_000;
+export const MAX_MESSAGE_LENGTH = 160;

@@ -540,7 +540,25 @@ export function createServer(user: string = DEMO_USER): McpServer {
       );
       return {
         contents: [
-          { uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html },
+          {
+            uri: resourceUri,
+            mimeType: RESOURCE_MIME_TYPE,
+            text: html,
+            // The widget is one self-contained file and makes no network
+            // requests of its own, so it asks for no external origins and no
+            // browser permissions. Data only flows through the host.
+            _meta: {
+              ui: {
+                csp: {
+                  connectDomains: [],
+                  resourceDomains: [],
+                  frameDomains: [],
+                  baseUriDomains: [],
+                },
+                permissions: {},
+              },
+            },
+          },
         ],
       };
     },

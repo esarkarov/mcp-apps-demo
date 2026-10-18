@@ -4,18 +4,21 @@ import type { Api } from "../lib/api";
 import { errorMessage } from "../lib/errors";
 import { formatDay, formatEur } from "../lib/format";
 import type { Txn } from "../types";
+import { Notice } from "./Notice";
 
-interface Props {
+interface DisputesTabProps {
   api: Api;
   onOpenTransaction: (txn: Txn) => void;
 }
 
-export function DisputesTab({ api, onOpenTransaction }: Props) {
+export function DisputesTab({ api, onOpenTransaction }: DisputesTabProps) {
   const [disputes, setDisputes] = useState<Txn[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setError(null);
     api
       .getDisputes()
       .then((list) => active && setDisputes(list))
@@ -23,13 +26,13 @@ export function DisputesTab({ api, onOpenTransaction }: Props) {
     return () => {
       active = false;
     };
-  }, [api]);
+  }, [api, attempt]);
 
   if (error)
     return (
-      <p role="alert" className="error">
+      <Notice kind="error" onRetry={() => setAttempt((n) => n + 1)}>
         {error}
-      </p>
+      </Notice>
     );
   if (disputes === null) return <p className="muted">Loading disputes…</p>;
   if (disputes.length === 0)

@@ -7,11 +7,13 @@ import type { Txn, TxnQuery } from "../types";
 export function useTransactions(api: Api, enabled: boolean, query: TxnQuery) {
   const [txns, setTxns] = useState<Txn[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
     let current = true;
     setTxns(null);
+    setError(null);
     const timer = setTimeout(async () => {
       try {
         const list = await api.getTransactions(query);
@@ -27,7 +29,7 @@ export function useTransactions(api: Api, enabled: boolean, query: TxnQuery) {
       current = false;
       clearTimeout(timer);
     };
-  }, [api, enabled, query]);
+  }, [api, enabled, query, attempt]);
 
   const replace = useCallback((updated: Txn) => {
     setTxns(
@@ -37,5 +39,7 @@ export function useTransactions(api: Api, enabled: boolean, query: TxnQuery) {
     );
   }, []);
 
-  return { txns, error, replace };
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  return { txns, error, replace, retry };
 }

@@ -1,17 +1,29 @@
 import type { App } from "@modelcontextprotocol/ext-apps";
-import { TOOL } from "../constants";
-import { formatEur } from "./format";
+import { REQUEST_TIMEOUT_MS, TOOL } from "../constants";
 import type { Dispute, DisputeReason, Overview, Txn, TxnQuery } from "../types";
+import { formatEur, toUserMessage } from "./format";
 
 export function createApi(app: App) {
   async function call<T>(
     name: string,
     args: Record<string, unknown>,
   ): Promise<T> {
-    const res = await app.callServerTool({ name, arguments: args });
+    let res;
+    try {
+      res = await app.callServerTool(
+        { name, arguments: args },
+        { timeout: REQUEST_TIMEOUT_MS },
+      );
+    } catch (e) {
+      throw new Error(
+        toUserMessage(e instanceof Error ? e.message : String(e)),
+      );
+    }
     if (res.isError) {
       const text = res.content?.find((c) => c.type === "text");
-      throw new Error(text && "text" in text ? text.text : "Request failed");
+      throw new Error(
+        toUserMessage(text && "text" in text ? text.text : "Request failed"),
+      );
     }
     return res.structuredContent as unknown as T;
   }
@@ -49,10 +61,6 @@ export function createApi(app: App) {
       return transaction;
     },
 
-    /**
-     * The model cannot see this iframe, so tell it what the customer did.
-     * (See `updateModelContext` in the MCP Apps docs.)
-     */
     reportDispute(t: Txn & { dispute: Dispute }) {
       return app.updateModelContext({
         content: [

@@ -1,3 +1,5 @@
+import { MAX_MESSAGE_LENGTH } from "../constants";
+
 const eurFull = new Intl.NumberFormat("en-IE", {
   style: "currency",
   currency: "EUR",
@@ -25,3 +27,19 @@ export const formatDay = (isoDate: string) =>
     month: "short",
     timeZone: "UTC",
   });
+
+export function toUserMessage(message: string): string {
+  if (/timed out/i.test(message)) return "The server did not respond in time.";
+  if (
+    /\b50[234]\b|bad gateway|error posting|unable to reach|failed to fetch|network|load failed/i.test(
+      message,
+    )
+  )
+    return "Could not reach the server. Try again in a moment.";
+  if (/closed|not connected/i.test(message))
+    return "The connection to the server was lost.";
+  const line = message.split("\n")[0].trim();
+  return line.length > MAX_MESSAGE_LENGTH
+    ? `${line.slice(0, MAX_MESSAGE_LENGTH)}…`
+    : line;
+}

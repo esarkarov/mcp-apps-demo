@@ -4,11 +4,12 @@ import { NO_FILTER, PERIOD_OPTIONS, TABS } from "../constants";
 import { useTransactions } from "../hooks/useTransactions";
 import { createApi } from "../lib/api";
 import { errorMessage } from "../lib/errors";
+import { Notice } from "./Notice";
 import { formatEur } from "../lib/format";
 import type { Insight, Overview, Tab, Txn, TxnFilter } from "../types";
+import { DisputesTab } from "./DisputesTab";
 import { OverviewTab } from "./OverviewTab";
 import { TransactionsTab } from "./TransactionsTab";
-import { DisputesTab } from "./DisputesTab";
 
 export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
   const api = useMemo(() => createApi(app), [app]);
@@ -33,6 +34,7 @@ export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
     txns,
     error: txnError,
     replace: replaceTxn,
+    retry: retryTxns,
   } = useTransactions(api, tab === "transactions", txnQuery);
   const error = actionError ?? txnError;
 
@@ -121,9 +123,12 @@ export function Dashboard({ app, initial }: { app: App; initial: Overview }) {
       </div>
 
       {error && (
-        <p role="alert" className="error">
+        <Notice
+          kind="error"
+          onRetry={txnError && !actionError ? retryTxns : undefined}
+        >
           {error}
-        </p>
+        </Notice>
       )}
 
       {tab === "overview" ? (
