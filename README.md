@@ -97,9 +97,27 @@ Reuse the same key on every start. A quick tunnel gets a new URL each time it re
 
 For a local run without a key, use `"url": "http://localhost:3001/mcp"` and no `headers`.
 
+## Run in ChatGPT (custom MCP server)
+
+ChatGPT's web app can add a custom MCP server (not available on mobile). Its authentication choices are OAuth, no authentication, or both; it has no option for a static key or header, so for a short test the server runs open, restricted to the tunnel host.
+
+1. Start the tunnel first (`npx cloudflared tunnel --url http://127.0.0.1:3001`) so you know its host name.
+2. Start the server without a key and allow only that host (host name only, no `https://` and no `/mcp`):
+
+   ```bash
+   ALLOWED_HOSTS=<tunnel-host> npm run serve                       # bash
+   set API_KEYS=&& set ALLOWED_HOSTS=<tunnel-host>&& npm run serve  # Windows cmd
+   ```
+
+3. In ChatGPT open Plugins, choose the plus button, then **Add custom MCP server**. Name `Spending Insights Demo`, connection **Server URL** `https://<tunnel-host>/mcp`, authentication **No authentication**, accept the warning, **Create as a plugin**.
+4. In a new chat type `@`, select the plugin, and ask the demo question.
+5. After a server change, open the connection on the Plugins page, choose **Refresh**, and start a new chat.
+
+Anyone who has the tunnel URL can call the server while it runs. Use it only for a short test with this sample data, then close the tunnel and stop the server. Steps follow OpenAI's [connect guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
+
 ## Security and data
 
-- **Auth:** with `API_KEYS` set, `/mcp` requires `Authorization: Bearer <key>` (`401` otherwise). Keys are compared by hash in constant time. `API_KEYS` takes `key` or `key:user` entries, comma-separated; dispute cases are kept per user. Optional: `ALLOWED_HOSTS` restricts the accepted Host header.
+- **Auth:** with `API_KEYS` set, `/mcp` requires `Authorization: Bearer <key>` (`401` otherwise). Keys are compared by hash in constant time. `API_KEYS` takes `key` or `key:user` entries, comma-separated; dispute cases are kept per user. `ALLOWED_HOSTS` restricts the accepted Host header; on its own, without `API_KEYS`, it leaves the server open to anyone who knows the URL (see ChatGPT above).
 - **Input limits:** request bodies up to 64 KB, validated transaction ids, comments up to 500 characters, filters up to 80.
 - **Persistence:** dispute cases are saved to `data/disputes.json` (override with `DISPUTES_FILE`) and survive a restart. Single server process only. Delete the file to start fresh; `data/` is git-ignored.
 - **Scope:** demo-grade protection with one shared key and no per-user identity. For real users, put an identity provider in front and keep the bearer-token check; the SDK's `requireBearerAuth` accepts any token verifier.
@@ -111,10 +129,12 @@ For a local run without a key, use `"url": "http://localhost:3001/mcp"` and no `
 | `basic-host`              | Works.                                                                                                     |
 | Claude (custom connector) | Works with the API key header.                                                                             |
 | VS Code Copilot           | Renders; tested through the tunnel before the API key was added, so the `headers` setup above is untested. |
-| ChatGPT                   | Not tested.                                                                                                |
+| ChatGPT                   | Renders on the first call; the dispute flow and the disputes list work. Only without authentication.       |
 
 - **A widget only renders when the model calls a tool linked to the view.** If the answer can come from earlier context, the model replies in text. This is why `show-disputes` exists.
 - **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host, which made text and dropdowns unreadable in a dark VS Code on a light Windows theme. The widget now applies the host's theme variables.
+- **ChatGPT authentication:** the custom-server dialog offers OAuth, no authentication, or both, with no static key or header, so the demo had to run open for the test. A real deployment would need OAuth.
+- **ChatGPT answer layer:** after opening the view, the model also wrote its own formatted answer (cards, charts, recommendations) from the tool's data, so the view was not the only visual output. In Claude the answer was a short text.
 - **VS Code first call:** one run failed with `[MCP App] Error loading app ... No MCP host initialized` and showed text; it worked later in a normal chat. A first-call race is a hypothesis, not confirmed. The widget can also be hidden inside a collapsed "Completed N steps" group.
 
 ## Demo script
