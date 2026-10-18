@@ -2,46 +2,42 @@
 
 A small MCP server that returns an interactive spending-insights view inside the conversation, for a retail-banking customer. Sample data only: one invented customer, invented merchants, nothing leaves the process and no dispute is sent anywhere. Built on the official `basic-server-react` starter from [ext-apps](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-react).
 
-Why this scenario: exploring financial data, spotting problems, and acting on them is a typical banking and fintech task. A text answer can list numbers; the widget lets the customer compare months, drill into a category, and act on a flagged payment in the same place. It matches the "data exploration" use case in the research paper.
+Why this scenario: exploring financial data, spotting problems, and acting on them is a typical banking task. A text answer can list numbers; the widget lets the customer compare months, drill into a category, and act on a flagged payment in the same place.
 
 ## What the widget does
 
-- **Overview:** income / spending / net / savings-rate tiles, a monthly income-vs-spending bar chart (hover or focus for values, "Show table" for an accessible table), spending by category (click a category to see its transactions), and a "What if I spent less?" calculator.
-- **Worth a look:** the server analyses the transactions and flags a possible duplicate charge, a subscription price increase, and an unusually large payment. "Review" jumps to the affected transactions.
+- **Overview:** income / spending / net / savings-rate tiles, a monthly income-vs-spending bar chart ("Show table" for an accessible table), spending by category, and a "What if I spent less?" calculator.
+- **Worth a look:** the server flags a possible duplicate charge, a subscription price increase, and an unusually large payment. "Review" jumps to the affected transactions.
 - **Transactions:** filter by category or merchant, open a payment, and dispute it (reason, optional comment, explicit confirm).
-- **Disputes:** the customer's cases with reference, merchant, amount, reason, an "Open" badge and the opened date. Asking "show my disputes" in chat opens this tab directly.
-- **Failure states:** a failed call shows one short message and a "Try again" button (server unreachable, timeout, connection lost). If the host sends no tool result, the widget fetches the overview itself after 3 seconds; if the host never completes the handshake, it says so after 10 seconds.
+- **Disputes:** the customer's cases with reference, merchant, amount, reason, and opened date.
+- **Failures:** a failed call shows a short message and a "Try again" button. If the host sends no tool result, the widget fetches the overview itself.
 
 ## Tools
 
-| Tool                     | Visible to                       | Purpose                                                                                                                                                                                            |
-| ------------------------ | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `show-spending-insights` | model + UI                       | Opens the view (read-only). The text result is the fallback for hosts without MCP Apps and is what the model reads: balance, totals, a month-by-month line, top categories, and the flagged items. |
-| `show-disputes`          | model + UI                       | Opens the same view on the Disputes tab (read-only). Exists because the model would otherwise answer dispute follow-ups in text from earlier context.                                              |
-| `get-overview`           | app only (`visibility: ["app"]`) | Refreshes aggregates when the period changes (3 / 6 months).                                                                                                                                       |
-| `get-transactions`       | app only                         | Filtered transaction list.                                                                                                                                                                         |
-| `get-disputes`           | app only                         | All dispute cases, newest first.                                                                                                                                                                   |
-| `dispute-transaction`    | app only                         | Opens a dispute case. Hidden from the model on purpose: a sensitive action needs a person to click.                                                                                                |
+| Tool                                               | Visible to                       | Purpose                                                                                                             |
+| -------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `show-spending-insights`                           | model + UI                       | Opens the view (read-only). The text result is the fallback for hosts without MCP Apps and is what the model reads. |
+| `show-disputes`                                    | model + UI                       | Opens the view on the Disputes tab (read-only).                                                                     |
+| `get-overview`, `get-transactions`, `get-disputes` | app only (`visibility: ["app"]`) | Data for the widget.                                                                                                |
+| `dispute-transaction`                              | app only                         | Opens a dispute case. Hidden from the model on purpose: a sensitive action needs a person to click.                 |
 
 After a dispute the widget calls `updateModelContext`, because the model cannot see the iframe. Trade-off: hosts without MCP Apps can summarise the data but cannot dispute.
 
-The widget is one self-contained file. Its resource declares an empty CSP (no external origins) and no browser permissions, so it makes no network requests of its own; all data goes through the host.
-
-Chart colours come from a palette checked with a colour-blind-safety validator (blue and orange for the two series, light and dark mode), and values are also available as text, a table, and per-mark labels. The widget follows the host's theme, not the OS setting.
+The widget is one self-contained file and its resource declares an empty CSP and no browser permissions, so it makes no network requests of its own.
 
 ## Run locally
 
-Requires Node 20+. No bun needed.
+Requires Node 20+.
 
 ```bash
 npm install
 npm run build
-npm run serve              # MCP endpoint: http://localhost:3001/mcp (port via PORT env var)
+npm run serve              # http://localhost:3001/mcp (port via PORT)
 ```
 
-With no `API_KEYS` set the server accepts only requests whose Host and Origin are localhost, so it cannot be reached through a tunnel by accident.
+Without `API_KEYS` the server accepts only localhost requests, so a tunnel cannot reach it by accident.
 
-Test host (official `basic-host`, from the ext-apps repo):
+Test host (official `basic-host`):
 
 ```bash
 git clone https://github.com/modelcontextprotocol/ext-apps.git
@@ -63,17 +59,17 @@ Needs a paid Claude plan and a public HTTPS URL. A free quick tunnel is enough f
    $env:API_KEYS="<your key>"; npm run serve  # PowerShell
    ```
 
-2. In a second terminal start the tunnel:
+2. Start the tunnel in a second terminal:
 
    ```bash
    npx cloudflared tunnel --url http://127.0.0.1:3001
    ```
 
-3. In Claude: Settings → Connectors → Add custom connector. Name `Spending Insights Demo`, URL `https://<tunnel-host>/mcp`, authentication **No sign-in**, then **Add header**: name `Authorization`, value `Bearer <your key>` (the word `Bearer`, a space, then the key).
+3. In Claude: Settings → Connectors → Add custom connector. Name `Spending Insights Demo`, URL `https://<tunnel-host>/mcp`, authentication **No sign-in**, then **Add header**: name `Authorization`, value `Bearer <your key>`.
 
 4. Ask, for example: "How has my spending looked over the last six months? Anything unusual?"
 
-The key is only a string you choose; reuse the same one on every start. A quick tunnel gets a new URL each time it restarts, so update the connector URL then. Close the tunnel when you finish.
+Reuse the same key on every start. A quick tunnel gets a new URL each time it restarts, so update the connector URL then. Close the tunnel when you finish.
 
 ### VS Code (GitHub Copilot)
 
@@ -101,54 +97,31 @@ The key is only a string you choose; reuse the same one on every start. A quick 
 
 For a local run without a key, use `"url": "http://localhost:3001/mcp"` and no `headers`.
 
-## Security
+## Security and data
 
-| Mode  | How              | Who can reach the server                                              |
-| ----- | ---------------- | --------------------------------------------------------------------- |
-| Local | no `API_KEYS`    | Only requests with a localhost Host and Origin. Bound to `127.0.0.1`. |
-| Key   | `API_KEYS=<key>` | Requests with `Authorization: Bearer <key>`. Others get `401`.        |
-
-- `API_KEYS` takes a comma-separated list of `key` or `key:user` entries (keys of at least 16 characters). A key without a user belongs to the user `demo`. Keys are compared by hash in constant time.
-- Request bodies are limited to 64 KB (`413` above that). Tool inputs are validated: transaction ids, comment length (500), filter length (80), at most 20 ids per query.
-- Dispute cases are kept per user.
-- Optional: `ALLOWED_HOSTS=<tunnel-host>` restricts the accepted Host header. `HOST` changes the bind address (default `127.0.0.1`).
-
-This is demo-grade protection: one shared key, no per-user identity, no rate limiting. For real users, put an identity provider (for example Entra ID, Okta or Keycloak) in front and keep the bearer-token check in `main.ts`; the SDK's `requireBearerAuth` already accepts any token verifier. An earlier version of this demo included its own OAuth server; it was removed because writing an authorization server is outside the point of the demo and not a pattern to copy.
-
-## Persistence
-
-Dispute cases are saved to `data/disputes.json` (override with `DISPUTES_FILE`) and loaded at start, so they survive a restart. The file is written through a temporary file and a rename. It is meant for one server process; two processes writing the same file will overwrite each other. `data/` is in `.gitignore`. To start fresh, stop the server and delete the file.
+- **Auth:** with `API_KEYS` set, `/mcp` requires `Authorization: Bearer <key>` (`401` otherwise). Keys are compared by hash in constant time. `API_KEYS` takes `key` or `key:user` entries, comma-separated; dispute cases are kept per user. Optional: `ALLOWED_HOSTS` restricts the accepted Host header.
+- **Input limits:** request bodies up to 64 KB, validated transaction ids, comments up to 500 characters, filters up to 80.
+- **Persistence:** dispute cases are saved to `data/disputes.json` (override with `DISPUTES_FILE`) and survive a restart. Single server process only. Delete the file to start fresh; `data/` is git-ignored.
+- **Scope:** demo-grade protection with one shared key and no per-user identity. For real users, put an identity provider in front and keep the bearer-token check; the SDK's `requireBearerAuth` accepts any token verifier.
 
 ## Tested hosts and findings
 
-| Host                      | Result                                                                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `basic-host` (ext-apps)   | Works. Used for the automated checks of all tabs, failure states and narrow frames.                                                   |
-| Claude (custom connector) | Works with API key header. Widget renders, disputes work, failure states shown.                                                       |
-| VS Code Copilot           | Renders after the fixes below. Tested through the tunnel before the API key was added; the `headers` setup above has not been tested. |
-| ChatGPT                   | Not tested.                                                                                                                           |
+| Host                      | Result                                                                                                     |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `basic-host`              | Works.                                                                                                     |
+| Claude (custom connector) | Works with the API key header.                                                                             |
+| VS Code Copilot           | Renders; tested through the tunnel before the API key was added, so the `headers` setup above is untested. |
+| ChatGPT                   | Not tested.                                                                                                |
 
-What we learned:
-
-- **A widget only renders when the model calls a tool that is linked to the view.** If the answer can be given from earlier context, the model replies in text and no view opens. This is why `show-disputes` exists. Tool descriptions should say when to use each view.
-- **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host. A dark VS Code on a light Windows theme produced unreadable text and dropdowns. The widget now applies the host's theme variables and sets colours on `select`, `option`, `input` and `textarea` explicitly.
-- **VS Code first call:** one run failed with `[MCP App] Error loading app ... No MCP host initialized` in a chat session of type `agent-host-copilotcli`, and the result showed as text. It worked in a normal chat afterwards. Some text-only results were also seen on the first call of a fresh connection; a first-call race is a hypothesis and is not confirmed. When a result looks like text, expand the "Completed N steps" group, it may be hidden there.
-- **Tunnel errors:** a stopped server behind a quick tunnel returns a long Cloudflare `502` body through the host. The widget shortens this to "Could not reach the server."
+- **A widget only renders when the model calls a tool linked to the view.** If the answer can come from earlier context, the model replies in text. This is why `show-disputes` exists.
+- **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host, which made text and dropdowns unreadable in a dark VS Code on a light Windows theme. The widget now applies the host's theme variables.
+- **VS Code first call:** one run failed with `[MCP App] Error loading app ... No MCP host initialized` and showed text; it worked later in a normal chat. A first-call race is a hypothesis, not confirmed. The widget can also be hidden inside a collapsed "Completed N steps" group.
 
 ## Demo script
 
 1. "How has my spending looked over the last six months? Anything unusual?" The view opens with the chart and three flagged items.
-2. Click **Review** on the Bistro Verde duplicate. Transactions filter to the two payments. Open one, **Dispute this payment**, confirm.
-3. Open **Disputes**. The case shows with an Open badge.
+2. Click **Review** on the Bistro Verde duplicate, open one payment, **Dispute this payment**, confirm.
+3. Open **Disputes**: the case shows as Open.
 4. In chat: "Show my disputes." The view opens on the Disputes tab.
-5. In chat: "What did I spend on groceries?" Depending on the model this may be answered in text from earlier context; that is expected.
-6. Stop the server and click **Transactions**: a short error and **Try again**. Restart and click it.
-7. Restart the server and ask "Show my disputes" in a new chat: the case is still there.
-
-## Demo limits
-
-- Sample data only; nothing is sent to a bank.
-- One shared API key, no per-user identity.
-- Dispute cases are saved to a local JSON file for a single server process.
-- Quick tunnels have no uptime guarantee and change URL on restart.
-- Not tested in ChatGPT; the VS Code first-call behaviour is unconfirmed, and VS Code with the key header is untested.
+5. Stop the server and click **Transactions**: a short error and **Try again**. Restart and click it.
+6. Ask "Show my disputes" in a new chat: the case is still there.
