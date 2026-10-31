@@ -23,7 +23,9 @@
     "watch": "cross-env INPUT=mcp-app.html vite build --watch",
     "serve": "tsx main.ts",
     "start": "npm run build && npm run serve",
-    "dev": "concurrently \"npm run watch\" \"tsx watch main.ts\""
+    "dev": "concurrently \"npm run watch\" \"tsx watch main.ts\"",
+    "tunnel": "npx cloudflared tunnel --url http://127.0.0.1:3001",
+    "keygen": "node -e \"console.log(require('crypto').randomBytes(24).toString('hex'))\""
   },
   "dependencies": {
     "@modelcontextprotocol/client": "2.0.0",

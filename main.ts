@@ -105,7 +105,9 @@ export async function startStreamableHTTPServer(
       );
     if (!authRequired)
       console.log(
-        "Auth: none. Only localhost Host headers are accepted; set API_KEYS to expose this server (for example through a tunnel).",
+        allowedHosts.length > 0
+          ? `Auth: none. Open to anyone who can reach ${allowedHosts.join(", ")}. Use only for a short test.`
+          : "Auth: none. Only localhost Host headers are accepted; set API_KEYS or ALLOWED_HOSTS to expose this server through a tunnel.",
       );
   });
   httpServer.on("error", (err) => {

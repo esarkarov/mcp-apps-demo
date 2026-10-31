@@ -35,45 +35,49 @@ npm run build
 npm run serve              # http://localhost:3001/mcp (port via PORT)
 ```
 
-Without `API_KEYS` the server accepts only localhost requests, so a tunnel cannot reach it by accident.
+Without `API_KEYS` or `ALLOWED_HOSTS` the server accepts only localhost requests, so a tunnel cannot reach it by accident.
 
 Test host (official `basic-host`):
 
 ```bash
 git clone https://github.com/modelcontextprotocol/ext-apps.git
 cd ext-apps/examples/basic-host && npm install
-SERVERS='["http://localhost:3001/mcp"]' npm start   # open http://localhost:8080
+SERVERS='["http://localhost:3001/mcp"]' npm start         # bash
+$env:SERVERS='["http://localhost:3001/mcp"]'; npm start   # PowerShell
 ```
 
-Pick tool `show-spending-insights`, input `{}`, Call Tool.
+Open http://localhost:8080, pick tool `show-spending-insights`, input `{}`, Call Tool. In the ext-apps version we used (2.0.3), `npm start` in `basic-host` runs `bun --watch serve.ts`, so Bun is needed for the test host; the demo server itself needs only Node.
 
-## Run in Claude (custom connector)
+## Connect a host
 
-Needs a paid Claude plan and a public HTTPS URL. A free quick tunnel is enough for a demo.
+Remote hosts need a public HTTPS URL. A free Cloudflare quick tunnel is enough for a demo. Every session:
 
-1. Choose a key of at least 16 characters, for example `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`, and start the server with it:
+1. Start the tunnel in one terminal and copy its host name: `npm run tunnel`. The host changes every time the tunnel restarts, so update the host's URL then.
+2. Start the server in a second terminal, in the mode the host needs (table below). `npx cross-env` sets the variables the same way in bash, cmd and PowerShell.
+3. Open `https://<tunnel-host>/mcp` in a browser. A JSON error from the MCP server means it is reachable; a Cloudflare 502 or a `403` means it is not.
 
-   ```bash
-   API_KEYS=<your key> npm run serve          # bash
-   set API_KEYS=<your key>&& npm run serve    # Windows cmd (no space before &&)
-   $env:API_KEYS="<your key>"; npm run serve  # PowerShell
-   ```
+The URL always ends in `/mcp`; the server answers on no other path.
 
-2. Start the tunnel in a second terminal:
+| Mode | Command                                                             | Used for        |
+| ---- | ------------------------------------------------------------------- | --------------- |
+| Key  | `npx cross-env API_KEYS=<key> npm run serve`                        | Claude, VS Code |
+| Open | `npx cross-env API_KEYS= ALLOWED_HOSTS=<tunnel-host> npm run serve` | ChatGPT, Gemini |
 
-   ```bash
-   npx cloudflared tunnel --url http://127.0.0.1:3001
-   ```
+Generate a key (at least 16 characters) with `npm run keygen` and use the same key on the server and in the host. Give `ALLOWED_HOSTS` the host name only, without `https://` and without `/mcp`. The server prints its mode at startup. Close the tunnel and stop the server when you finish.
 
-3. In Claude: Settings → Connectors → Add custom connector. Name `Spending Insights Demo`, URL `https://<tunnel-host>/mcp`, authentication **No sign-in**, then **Add header**: name `Authorization`, value `Bearer <your key>`.
+### Claude (custom connector)
 
-4. Ask, for example: "How has my spending looked over the last six months? Anything unusual?"
+Needs a paid Claude plan. Use key mode.
 
-Reuse the same key on every start. A quick tunnel gets a new URL each time it restarts, so update the connector URL then. Close the tunnel when you finish.
+1. Settings → Connectors → Add custom connector.
+2. Name `Spending Insights Demo`, URL `https://<tunnel-host>/mcp`.
+3. Authentication: choose **No sign-in** (the dialog may preselect "Sign in now").
+4. **Add header**: name `Authorization`, value `Bearer <your key>`. Leave the transport on Streamable HTTP and choose **Add**.
+5. Ask, for example: "How has my spending looked over the last six months? Anything unusual?"
 
 ### VS Code (GitHub Copilot)
 
-`.vscode/mcp.json`:
+Use key mode. `.vscode/mcp.json` (or **MCP: Open User Configuration**):
 
 ```json
 {
@@ -97,45 +101,73 @@ Reuse the same key on every start. A quick tunnel gets a new URL each time it re
 
 For a local run without a key, use `"url": "http://localhost:3001/mcp"` and no `headers`.
 
-## Run in ChatGPT (custom MCP server)
+1. Command Palette → **MCP: List Servers** → select the server → **Start Server**, and enter the key when asked.
+2. In Copilot Chat, use **Agent** mode and tick the server's tools in the tools picker.
+3. Ask with the tool named: "Use the show-spending-insights tool to show my spending over the last six months."
 
-ChatGPT's web app can add a custom MCP server (not available on mobile). Its authentication choices are OAuth, no authentication, or both; it has no option for a static key or header, so for a short test the server runs open, restricted to the tunnel host.
+Open a folder other than this repository as the workspace. With this repository open, the Copilot agent read `server.ts` and offered to run its code instead of calling the tool (see findings).
 
-1. Start the tunnel first (`npx cloudflared tunnel --url http://127.0.0.1:3001`) so you know its host name.
-2. Start the server without a key and allow only that host (host name only, no `https://` and no `/mcp`):
+### ChatGPT (custom MCP server)
 
-   ```bash
-   ALLOWED_HOSTS=<tunnel-host> npm run serve                       # bash
-   set API_KEYS=&& set ALLOWED_HOSTS=<tunnel-host>&& npm run serve  # Windows cmd
-   ```
+ChatGPT's web app can add a custom MCP server (not available on mobile). Its authentication choices are OAuth, no authentication, or both; it has no option for a static key or header, so for a short test the server runs in open mode, restricted to the tunnel host.
 
-3. In ChatGPT open Plugins, choose the plus button, then **Add custom MCP server**. Name `Spending Insights Demo`, connection **Server URL** `https://<tunnel-host>/mcp`, authentication **No authentication**, accept the warning, **Create as a plugin**.
-4. In a new chat type `@`, select the plugin, and ask the demo question.
-5. After a server change, open the connection on the Plugins page, choose **Refresh**, and start a new chat.
+1. Start the server in open mode.
+2. In ChatGPT open Plugins and add a custom MCP server (OpenAI's guide: plus button, then **Add custom MCP server**). Name `Spending Insights Demo`, connection **Server URL** `https://<tunnel-host>/mcp`, authentication **No authentication**, tick "I understand and want to continue", **Create as a plugin**. The dialog also has a **Tunnel** connection option, which we did not try.
+3. In a new chat type `@`, select the plugin, and ask the demo question.
+4. After a server change, OpenAI's guide says to open the connection on the Plugins page, choose **Refresh**, and start a new chat (not exercised here).
 
-Anyone who has the tunnel URL can call the server while it runs. Use it only for a short test with this sample data, then close the tunnel and stop the server. Steps follow OpenAI's [connect guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
+Anyone who has the tunnel URL can call the server while it runs. Use it only for a short test with this sample data. Steps follow OpenAI's [connect guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
 
-## Security and data
+### Gemini (custom connector)
 
-- **Auth:** with `API_KEYS` set, `/mcp` requires `Authorization: Bearer <key>` (`401` otherwise). Keys are compared by hash in constant time. `API_KEYS` takes `key` or `key:user` entries, comma-separated; dispute cases are kept per user. `ALLOWED_HOSTS` restricts the accepted Host header; on its own, without `API_KEYS`, it leaves the server open to anyone who knows the URL (see ChatGPT above).
-- **Input limits:** request bodies up to 64 KB, validated transaction ids, comments up to 500 characters, filters up to 80.
-- **Persistence:** dispute cases are saved to `data/disputes.json` (override with `DISPUTES_FILE`) and survive a restart. Single server process only. Delete the file to start fresh; `data/` is git-ignored.
+1. Start the server in open mode.
+2. In Gemini open Customize → Connectors and add a custom MCP server. Enter `https://<tunnel-host>/mcp` and leave Client ID and Client secret empty.
+3. In a chat, mention the connector and ask the demo question. Gemini asks permission before calling the tool.
+
+In our test Gemini called the tool but did not request the widget (see findings).
+
+## Configuration, security and data
+
+| Variable        | Default              | Purpose                                                                                                       |
+| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `PORT`          | `3001`               | Listening port. `npm run tunnel` assumes 3001.                                                                |
+| `HOST`          | `127.0.0.1`          | Bind address.                                                                                                 |
+| `API_KEYS`      | unset                | Comma-separated `key` or `key:user` entries (keys of at least 16 characters). Turns on bearer authentication. |
+| `ALLOWED_HOSTS` | unset                | Comma-separated host names accepted in the Host header.                                                       |
+| `DISPUTES_FILE` | `data/disputes.json` | Where dispute cases are saved.                                                                                |
+
+- **Access modes:** with no `API_KEYS` and no `ALLOWED_HOSTS`, only localhost Host and Origin values are accepted. With `API_KEYS`, `/mcp` requires `Authorization: Bearer <key>` (`401` otherwise); keys are compared by hash in constant time, and dispute cases are kept per user. With `ALLOWED_HOSTS` alone, requests for a listed host are accepted without authentication (others get `403`), so the server is open to anyone who knows the URL.
+- **CORS:** the server sends `Access-Control-Allow-Origin: *` (the default `cors()` setting). The widget itself needs no CORS because it calls no external APIs.
+- **Input limits:** request bodies up to 64 KB (`413` above that), transaction ids validated, comments up to 500 characters, filters up to 80, at most 20 ids per query.
+- **Persistence:** dispute cases are saved to the JSON file and survive a restart. Single server process only. Delete the file to start fresh; `data/` is git-ignored.
 - **Scope:** demo-grade protection with one shared key and no per-user identity. For real users, put an identity provider in front and keep the bearer-token check; the SDK's `requireBearerAuth` accepts any token verifier.
 
 ## Tested hosts and findings
 
-| Host                      | Result                                                                                                     |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `basic-host`              | Works.                                                                                                     |
-| Claude (custom connector) | Works with the API key header.                                                                             |
-| VS Code Copilot           | Renders; tested through the tunnel before the API key was added, so the `headers` setup above is untested. |
-| ChatGPT                   | Renders on the first call; the dispute flow and the disputes list work. Only without authentication.       |
+| Host                      | Result                                                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `basic-host`              | Works.                                                                                                                                                               |
+| Claude (custom connector) | Works with the API key header.                                                                                                                                       |
+| VS Code Copilot           | Rendered in an earlier test, before the API key was added. Retest with the key header: connected and listed six tools, but the agent did not call them (unresolved). |
+| ChatGPT                   | Renders on the first call; the dispute flow and the disputes list work. Only without authentication.                                                                 |
+| Gemini                    | Connects without OAuth credentials and calls `show-spending-insights`; the widget is not requested or shown.                                                         |
 
 - **A widget only renders when the model calls a tool linked to the view.** If the answer can come from earlier context, the model replies in text. This is why `show-disputes` exists.
 - **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host, which made text and dropdowns unreadable in a dark VS Code on a light Windows theme. The widget now applies the host's theme variables.
 - **ChatGPT authentication:** the custom-server dialog offers OAuth, no authentication, or both, with no static key or header, so the demo had to run open for the test. A real deployment would need OAuth.
 - **ChatGPT answer layer:** after opening the view, the model also wrote its own formatted answer (cards, charts, recommendations) from the tool's data, so the view was not the only visual output. In Claude the answer was a short text.
+- **Gemini:** the server log shows `tools/call` but no `resources/read`, so the `ui://` view was never requested. Gemini drew its own chart and sliders from the text result, and its figures did not agree with each other. Other Gemini surfaces were not checked.
 - **VS Code first call:** one run failed with `[MCP App] Error loading app ... No MCP host initialized` and showed text; it worked later in a normal chat. A first-call race is a hypothesis, not confirmed. The widget can also be hidden inside a collapsed "Completed N steps" group.
+- **VS Code retest:** with this repository open as the workspace, the agent read `server.ts` and proposed running its code instead of calling the tool, and once reported it could not find `show-spending-insights` after the server had listed its tools. Not resolved.
+
+## Troubleshooting
+
+- **`403` through the tunnel:** the server was started without `API_KEYS` or `ALLOWED_HOSTS`, or `ALLOWED_HOSTS` does not match the current tunnel host (it changes on every tunnel restart).
+- **`401`:** `API_KEYS` is set but the request has no matching `Authorization: Bearer <key>` header. ChatGPT and Gemini cannot send one, so use open mode for them. VS Code asking for an OAuth client ID after a failed request is a sign of this; restart the server with the same key you give VS Code.
+- **ChatGPT "The MCP server denied access":** the server is in key mode (`401`) or `ALLOWED_HOSTS` does not match the tunnel host (`403`).
+- **`404` "Cannot GET /":** the URL is missing `/mcp`.
+- **"Could not reach the server" in the widget:** the server or the tunnel is stopped. Restart it and choose **Try again**.
+- **Text only, no view:** the model did not call a tool linked to the view. Ask again or name the tool.
 
 ## Demo script
 
