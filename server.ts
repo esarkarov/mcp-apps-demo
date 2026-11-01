@@ -12,7 +12,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { DEMO_USER } from "./auth.js";
 import {
   getDispute,
   listDisputes,
@@ -311,15 +310,15 @@ const eurFormat = new Intl.NumberFormat("en-IE", {
 });
 const eur = (n: number) => eurFormat.format(n);
 
-const disputedTransactions = (user: string): Required<TxnView>[] =>
-  listDisputes(user)
+const disputedTransactions = (): Required<TxnView>[] =>
+  listDisputes()
     .flatMap(({ transactionId, dispute }) => {
       const t = txns.find((x) => x.id === transactionId);
       return t ? [{ ...t, dispute } as Required<TxnView>] : [];
     })
     .sort((a, b) => (a.dispute.openedAt < b.dispute.openedAt ? 1 : -1));
 
-export function createServer(user: string = DEMO_USER): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "Spending Insights Demo",
     version: "1.0.0",
@@ -381,7 +380,7 @@ export function createServer(user: string = DEMO_USER): McpServer {
       _meta: { ui: { resourceUri } },
     },
     async (): Promise<CallToolResult> => {
-      const list = disputedTransactions(user);
+      const list = disputedTransactions();
       const text = list.length
         ? `Dispute cases (all open):\n${list
             .map(
@@ -411,7 +410,7 @@ export function createServer(user: string = DEMO_USER): McpServer {
       _meta: { ui: { resourceUri, visibility: ["app"] } },
     },
     async (): Promise<CallToolResult> => {
-      const list = disputedTransactions(user);
+      const list = disputedTransactions();
       return {
         content: [{ type: "text", text: `${list.length} disputes` }],
         structuredContent: { disputes: list },
@@ -462,7 +461,7 @@ export function createServer(user: string = DEMO_USER): McpServer {
         .map((t) => ({
           ...t,
           flagged: flagged.has(t.id),
-          dispute: getDispute(user, t.id),
+          dispute: getDispute(t.id),
         }));
       return {
         content: [{ type: "text", text: `${list.length} transactions` }],
@@ -506,7 +505,7 @@ export function createServer(user: string = DEMO_USER): McpServer {
             { type: "text", text: "Only card payments can be disputed." },
           ],
         };
-      const existing = getDispute(user, t.id);
+      const existing = getDispute(t.id);
       if (existing)
         return {
           isError: true,
@@ -521,7 +520,7 @@ export function createServer(user: string = DEMO_USER): McpServer {
             { type: "text", text: "Please add a comment for reason 'other'." },
           ],
         };
-      const dispute = openDispute(user, t.id, reason, comment.trim());
+      const dispute = openDispute(t.id, reason, comment.trim());
       return {
         content: [
           {

@@ -1,10 +1,8 @@
 import { createServer } from "./server.js";
-import { createApiKeyVerifier, DEMO_USER, parseApiKeys } from "./auth.js";
 import {
   hostHeaderValidation,
   localhostHostValidation,
   localhostOriginValidation,
-  requireBearerAuth,
 } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
 import type { McpServer } from "@modelcontextprotocol/server";
@@ -34,33 +32,26 @@ const rejectBadBody: ErrorRequestHandler = (err, _req, res, _next) => {
 };
 
 export async function startStreamableHTTPServer(
-  createServer: (user: string) => McpServer,
+  createServer: () => McpServer,
 ): Promise<void> {
   const port = parseInt(process.env.PORT ?? "3001", 10);
   const host = process.env.HOST ?? "127.0.0.1";
-  const apiKeys = parseApiKeys(process.env.API_KEYS);
   const allowedHosts = csv(process.env.ALLOWED_HOSTS);
-  const authRequired = apiKeys.size > 0;
-  const verifier = createApiKeyVerifier(apiKeys);
 
   const app = express();
   app.disable("x-powered-by");
   app.use(cors());
 
   if (allowedHosts.length > 0) app.use(hostHeaderValidation(allowedHosts));
-  else if (!authRequired) {
+  else {
     app.use(localhostHostValidation());
     app.use(localhostOriginValidation());
   }
-
-  if (authRequired) app.use("/mcp", requireBearerAuth({ verifier }));
 
   app.use(express.json({ limit: MAX_BODY }));
   app.use(rejectBadBody);
 
   app.all("/mcp", async (req: Request, res: Response) => {
-    const tokenUser = req.auth?.extra?.user;
-    const user = typeof tokenUser === "string" ? tokenUser : DEMO_USER;
     const calls = Array.isArray(req.body)
       ? req.body
       : req.body
@@ -69,10 +60,10 @@ export async function startStreamableHTTPServer(
     for (const call of calls)
       if (call?.method)
         console.log(
-          `[mcp] ${user} ${call.method}${call.params?.name ? ` ${call.params.name}` : call.params?.uri ? ` ${call.params.uri}` : ""}`,
+          `[mcp] ${call.method}${call.params?.name ? ` ${call.params.name}` : call.params?.uri ? ` ${call.params.uri}` : ""}`,
         );
 
-    const server = createServer(user);
+    const server = createServer();
     const transport = new NodeStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
     });
@@ -99,16 +90,11 @@ export async function startStreamableHTTPServer(
 
   const httpServer = app.listen(port, host, () => {
     console.log(`MCP server listening on http://${host}:${port}/mcp`);
-    if (apiKeys.size > 0)
-      console.log(
-        `Auth: Bearer API key accepted. Users: ${[...new Set(apiKeys.values())].join(", ")}`,
-      );
-    if (!authRequired)
-      console.log(
-        allowedHosts.length > 0
-          ? `Auth: none. Open to anyone who can reach ${allowedHosts.join(", ")}. Use only for a short test.`
-          : "Auth: none. Only localhost Host headers are accepted; set API_KEYS or ALLOWED_HOSTS to expose this server through a tunnel.",
-      );
+    console.log(
+      allowedHosts.length > 0
+        ? `Auth: none. Open to anyone who can reach ${allowedHosts.join(", ")}. Use only for a short test with sample data.`
+        : "Only localhost Host headers are accepted. Set ALLOWED_HOSTS to expose this server through a tunnel.",
+    );
   });
   httpServer.on("error", (err) => {
     console.error("Failed to start server:", err);
@@ -132,7 +118,7 @@ export async function startStdioServer(
 
 async function main() {
   if (process.argv.includes("--stdio")) {
-    await startStdioServer(() => createServer(DEMO_USER));
+    await startStdioServer(() => createServer());
   } else {
     await startStreamableHTTPServer(createServer);
   }
