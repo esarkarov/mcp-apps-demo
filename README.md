@@ -85,10 +85,9 @@ Needs a paid Claude plan.
 For a local run, use `"url": "http://localhost:3001/mcp"`.
 
 1. Command Palette → **MCP: List Servers** → select the server → **Start Server**.
-2. In Copilot Chat, use **Agent** mode. In **Configure Tools** (or the tool count above the server in `mcp.json`) tick the server's tools.
-3. Ask: "Use the show-spending-insights tool to show my spending over the last six months."
+2. In Copilot Chat, use **Agent** mode and ask: "How has my spending looked over the last six months? Anything unusual?"
 
-Open a folder other than this repository as the workspace. With this repository open, the Copilot agent read `server.ts` and offered to run its code instead of calling the tool (see findings).
+If the chat says the tool is not available, check the server's status and **Show Output** in **MCP: List Servers** first (see troubleshooting).
 
 ### ChatGPT (custom MCP server)
 
@@ -123,28 +122,29 @@ In our test Gemini called the tool but did not request the widget (see findings)
 
 ## Tested hosts and findings
 
-| Host                      | Result                                                                                                                                                                                   |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `basic-host`              | Works.                                                                                                                                                                                   |
-| Claude (custom connector) | Works. Tested with an API key header before the demo dropped authentication; not retested without it.                                                                                    |
-| VS Code Copilot           | Rendered in an earlier test, before the API key was added. Retest (with an API key header, since removed): connected and listed six tools, but the agent did not call them (unresolved). |
-| ChatGPT                   | Renders on the first call; the dispute flow and the disputes list work. Requires no authentication.                                                                                      |
-| Gemini                    | Connects without OAuth credentials and calls `show-spending-insights`; the widget is not requested or shown.                                                                             |
+| Host                      | Result                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `basic-host`              | Works.                                                                                                                       |
+| Claude (custom connector) | Works without authentication. Earlier tests used an API key header, since removed.                                           |
+| VS Code Copilot           | Works: the view renders, and the dispute flow and the disputes list work. Earlier failures were setup errors (see findings). |
+| ChatGPT                   | Renders on the first call; the dispute flow and the disputes list work. Requires no authentication.                          |
+| Gemini                    | Connects without OAuth credentials and calls `show-spending-insights`; the widget is not requested or shown in our test.     |
 
 - **A widget only renders when the model calls a tool linked to the view.** If the answer can come from earlier context, the model replies in text. This is why `show-disputes` exists.
-- **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host, which made text and dropdowns unreadable in a dark VS Code on a light Windows theme. The widget now applies the host's theme variables.
+- **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host, which made text and dropdowns unreadable in a dark VS Code on a light Windows theme. The widget now applies the host's theme variables, and the theme matched in Claude, ChatGPT and VS Code.
 - **ChatGPT authentication:** the custom-server dialog offers OAuth, no authentication, or both, with no static key or header, so the demo runs without authentication. A real deployment would need OAuth.
 - **ChatGPT answer layer:** after opening the view, the model also wrote its own formatted answer (cards, charts, recommendations) from the tool's data, so the view was not the only visual output. In Claude the answer was a short text.
 - **Gemini:** the server log shows `tools/call` but no `resources/read`, so the `ui://` view was never requested. Gemini drew its own chart and sliders from the text result, and its figures did not agree with each other. Other Gemini surfaces were not checked.
 - **VS Code first call:** one run failed with `[MCP App] Error loading app ... No MCP host initialized` and showed text; it worked later in a normal chat. A first-call race is a hypothesis, not confirmed. The widget can also be hidden inside a collapsed "Completed N steps" group.
-- **VS Code retest:** with this repository open as the workspace, the agent read `server.ts` and proposed running its code instead of calling the tool, and once reported it could not find `show-spending-insights` after the server had listed its tools. Not resolved.
+- **VS Code setup errors look like a missing tool.** When the server was not connected, Copilot answered that the tool was not available and its agent read `server.ts` instead. The causes were a URL without `/mcp` (`404`) and a server started without `ALLOWED_HOSTS` (`403 Invalid Host`); both appear only in the VS Code server log, not in the chat.
 
 ## Troubleshooting
 
 - **`403` through the tunnel:** the server was started without `ALLOWED_HOSTS`, or `ALLOWED_HOSTS` does not match the current tunnel host (it changes on every tunnel restart). ChatGPT shows this as "The MCP server denied access".
 - **`404` "Cannot GET /":** the URL is missing `/mcp`.
 - **"Could not reach the server" in the widget:** the server or the tunnel is stopped. Restart it and choose **Try again**.
-- **Text only, no view:** the model did not call a tool linked to the view. Ask again or name the tool. In VS Code also check that the server's tools are ticked in Configure Tools.
+- **Text only, no view:** the model did not call a tool linked to the view. Ask again or name the tool.
+- **VS Code chat says the tool is not available:** the server did not connect. In **MCP: List Servers** choose **Show Output** and look for a `404` (URL without `/mcp`) or a `403 Invalid Host` (see above).
 
 ## Demo script
 
