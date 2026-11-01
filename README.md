@@ -19,7 +19,7 @@ A small MCP server that returns an interactive spending-insights view inside the
 | `get-overview`, `get-transactions`, `get-disputes` | app only (`visibility: ["app"]`) | Data for the widget.                                                                      |
 | `dispute-transaction`                              | app only                         | Opens a dispute case. Hidden from the model on purpose: a sensitive action needs a click. |
 
-After a dispute the widget calls `updateModelContext`, because the model cannot see the iframe. The widget is one self-contained file; its resource declares an empty CSP and no browser permissions.
+After a dispute the widget calls `updateModelContext`, because the model cannot see the iframe. In our tests this reached the model in ChatGPT but not in Claude or VS Code Copilot, so the model can still learn about a dispute by calling `show-disputes`. The widget is one self-contained file; its resource declares an empty CSP and no browser permissions.
 
 ## Run locally
 
