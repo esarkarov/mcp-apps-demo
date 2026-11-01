@@ -1,29 +1,25 @@
 # Spending insights — MCP Apps demo (banking)
 
-A small MCP server that returns an interactive spending-insights view inside the conversation, for a retail-banking customer. Sample data only: one invented customer, invented merchants, nothing leaves the process and no dispute is sent anywhere. Built on the official `basic-server-react` starter from [ext-apps](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-react).
-
-Why this scenario: exploring financial data, spotting problems, and acting on them is a typical banking task. A text answer can list numbers; the widget lets the customer compare months, drill into a category, and act on a flagged payment in the same place.
+A small MCP server that returns an interactive spending-insights view inside the conversation, for a retail-banking customer. Sample data only: one invented customer, invented merchants, and no dispute is sent anywhere. Built on the official [`basic-server-react`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-react) starter from ext-apps.
 
 ## What the widget does
 
-- **Overview:** income / spending / net / savings-rate tiles, a monthly income-vs-spending bar chart ("Show table" for an accessible table), spending by category, and a "What if I spent less?" calculator.
-- **Worth a look:** the server flags a possible duplicate charge, a subscription price increase, and an unusually large payment. "Review" jumps to the affected transactions.
+- **Overview:** income, spending, net and savings-rate tiles, a monthly bar chart (with a "Show table" alternative), spending by category, and a "What if I spent less?" calculator.
+- **Worth a look:** flags a possible duplicate charge, a subscription price increase and an unusually large payment. "Review" jumps to the affected transactions.
 - **Transactions:** filter by category or merchant, open a payment, and dispute it (reason, optional comment, explicit confirm).
-- **Disputes:** the customer's cases with reference, merchant, amount, reason, and opened date.
-- **Failures:** a failed call shows a short message and a "Try again" button. If the host sends no tool result, the widget fetches the overview itself.
+- **Disputes:** the customer's cases with reference, merchant, amount, reason and opened date.
+- **Failures:** a failed call shows a short message and a "Try again" button.
 
 ## Tools
 
-| Tool                                               | Visible to                       | Purpose                                                                                                             |
-| -------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `show-spending-insights`                           | model + UI                       | Opens the view (read-only). The text result is the fallback for hosts without MCP Apps and is what the model reads. |
-| `show-disputes`                                    | model + UI                       | Opens the view on the Disputes tab (read-only).                                                                     |
-| `get-overview`, `get-transactions`, `get-disputes` | app only (`visibility: ["app"]`) | Data for the widget.                                                                                                |
-| `dispute-transaction`                              | app only                         | Opens a dispute case. Hidden from the model on purpose: a sensitive action needs a person to click.                 |
+| Tool                                               | Visible to                       | Purpose                                                                                   |
+| -------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `show-spending-insights`                           | model + UI                       | Opens the view. The text result is the fallback for hosts without MCP Apps.               |
+| `show-disputes`                                    | model + UI                       | Opens the view on the Disputes tab.                                                       |
+| `get-overview`, `get-transactions`, `get-disputes` | app only (`visibility: ["app"]`) | Data for the widget.                                                                      |
+| `dispute-transaction`                              | app only                         | Opens a dispute case. Hidden from the model on purpose: a sensitive action needs a click. |
 
-After a dispute the widget calls `updateModelContext`, because the model cannot see the iframe. Trade-off: hosts without MCP Apps can summarise the data but cannot dispute.
-
-The widget is one self-contained file and its resource declares an empty CSP and no browser permissions, so it makes no network requests of its own.
+After a dispute the widget calls `updateModelContext`, because the model cannot see the iframe. The widget is one self-contained file; its resource declares an empty CSP and no browser permissions.
 
 ## Run locally
 
@@ -32,12 +28,10 @@ Requires Node 20+.
 ```bash
 npm install
 npm run build
-npm run serve              # http://localhost:3001/mcp (port via PORT)
+npm run serve   # http://localhost:3001/mcp (port via PORT)
 ```
 
-Without `ALLOWED_HOSTS` the server accepts only localhost requests, so a tunnel cannot reach it by accident.
-
-Test host (official `basic-host`):
+Test with the official `basic-host` (needs Bun):
 
 ```bash
 git clone https://github.com/modelcontextprotocol/ext-apps.git
@@ -46,30 +40,27 @@ SERVERS='["http://localhost:3001/mcp"]' npm start         # bash
 $env:SERVERS='["http://localhost:3001/mcp"]'; npm start   # PowerShell
 ```
 
-Open http://localhost:8080, pick tool `show-spending-insights`, input `{}`, Call Tool. In the ext-apps version we used (2.0.3), `npm start` in `basic-host` runs `bun --watch serve.ts`, so Bun is needed for the test host; the demo server itself needs only Node.
+Open http://localhost:8080, pick `show-spending-insights`, input `{}`, **Call Tool**.
 
 ## Connect a host
 
-Remote hosts need a public HTTPS URL. A free Cloudflare quick tunnel is enough for a demo. The demo has no authentication, so the same steps apply to every host. Every session:
+Remote hosts need a public HTTPS URL. A free Cloudflare quick tunnel is enough. The demo has no authentication, so the steps are the same for every host. Each session:
 
-1. Start the tunnel in one terminal and copy its host name: `npm run tunnel`. The host changes every time the tunnel restarts, so update the host's URL then.
-2. Start the server in a second terminal, allowing only that host (host name only, without `https://` and without `/mcp`): `npx cross-env ALLOWED_HOSTS=<tunnel-host> npm run serve`. `npx cross-env` sets the variable the same way in bash, cmd and PowerShell.
+1. Start the tunnel and copy its host name: `npm run tunnel`. The host changes on every restart.
+2. In a second terminal, start the server allowing only that host (host name only, no `https://`, no `/mcp`): `npx cross-env ALLOWED_HOSTS=<tunnel-host> npm run serve`
 3. Open `https://<tunnel-host>/mcp` in a browser. A JSON error from the MCP server means it is reachable; a Cloudflare 502 or a `403` means it is not.
 
-The URL always ends in `/mcp`; the server answers on no other path. While the server runs, anyone who has the tunnel URL can call it. It serves sample data only; close the tunnel and stop the server when you finish.
+The URL always ends in `/mcp`. While the server runs, anyone with the tunnel URL can call it, so use sample data only and stop the server and tunnel when you finish.
 
-### Claude (custom connector)
+Example prompt for every host: "How has my spending looked over the last six months? Anything unusual?"
 
-Needs a paid Claude plan.
+### Claude
 
-1. Settings → Connectors → Add custom connector.
-2. Name `Spending Insights Demo`, URL `https://<tunnel-host>/mcp`.
-3. Authentication: choose **No sign-in** (the dialog may preselect "Sign in now"). Add no headers.
-4. Choose **Add**, then ask, for example: "How has my spending looked over the last six months? Anything unusual?"
+Needs a paid plan. Settings → Connectors → Add custom connector. Name `Spending Insights Demo`, URL `https://<tunnel-host>/mcp`, authentication **No sign-in** (the dialog may preselect "Sign in now"), no headers.
 
 ### VS Code (GitHub Copilot)
 
-`.vscode/mcp.json` (or **MCP: Open User Configuration**):
+Add to `.vscode/mcp.json` (or **MCP: Open User Configuration**):
 
 ```json
 {
@@ -82,31 +73,17 @@ Needs a paid Claude plan.
 }
 ```
 
-For a local run, use `"url": "http://localhost:3001/mcp"`.
+Run **MCP: List Servers** → select the server → **Start Server**, then use Copilot Chat in **Agent** mode. For a local run use `http://localhost:3001/mcp`.
 
-1. Command Palette → **MCP: List Servers** → select the server → **Start Server**.
-2. In Copilot Chat, use **Agent** mode and ask: "How has my spending looked over the last six months? Anything unusual?"
+### ChatGPT
 
-If the chat says the tool is not available, check the server's status and **Show Output** in **MCP: List Servers** first (see troubleshooting).
+Web app only. Plugins → add a custom MCP server (**Add custom MCP server**). Name `Spending Insights Demo`, **Server URL** `https://<tunnel-host>/mcp`, authentication **No authentication**, tick "I understand and want to continue", **Create as a plugin**. In a new chat type `@` and select the plugin. See OpenAI's [connect guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
 
-### ChatGPT (custom MCP server)
+### Gemini
 
-ChatGPT's web app can add a custom MCP server (not available on mobile). Its authentication choices are OAuth, no authentication, or both, with no option for a static key or header.
+Customize → Connectors → add a custom MCP server. Enter `https://<tunnel-host>/mcp` and leave Client ID and Client secret empty. Mention the connector in a chat; Gemini asks permission before calling the tool. In our test it called the tool but did not request the widget.
 
-1. In ChatGPT open Plugins and add a custom MCP server (OpenAI's guide: plus button, then **Add custom MCP server**). Name `Spending Insights Demo`, connection **Server URL** `https://<tunnel-host>/mcp`, authentication **No authentication**, tick "I understand and want to continue", **Create as a plugin**. The dialog also has a **Tunnel** connection option, which we did not try.
-2. In a new chat type `@`, select the plugin, and ask the demo question.
-3. After a server change, OpenAI's guide says to open the connection on the Plugins page, choose **Refresh**, and start a new chat (not exercised here).
-
-Steps follow OpenAI's [connect guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
-
-### Gemini (custom connector)
-
-1. In Gemini open Customize → Connectors and add a custom MCP server. Enter `https://<tunnel-host>/mcp` and leave Client ID and Client secret empty.
-2. In a chat, mention the connector and ask the demo question. Gemini asks permission before calling the tool.
-
-In our test Gemini called the tool but did not request the widget (see findings).
-
-## Configuration, security and data
+## Configuration
 
 | Variable        | Default              | Purpose                                                 |
 | --------------- | -------------------- | ------------------------------------------------------- |
@@ -115,40 +92,34 @@ In our test Gemini called the tool but did not request the widget (see findings)
 | `ALLOWED_HOSTS` | unset                | Comma-separated host names accepted in the Host header. |
 | `DISPUTES_FILE` | `data/disputes.json` | Where dispute cases are saved.                          |
 
-- **No authentication:** the demo has no sign-in and no API key. With no `ALLOWED_HOSTS`, only localhost Host and Origin values are accepted. With `ALLOWED_HOSTS`, requests for a listed host are accepted from anyone (others get `403`), so the server is open to anyone who knows the URL while a tunnel runs. A real deployment would need OAuth or an identity provider in front, which the demo does not include.
-- **CORS:** the server sends `Access-Control-Allow-Origin: *` (the default `cors()` setting). The widget itself needs no CORS because it calls no external APIs.
-- **Input limits:** request bodies up to 64 KB (`413` above that), transaction ids validated, comments up to 500 characters, filters up to 80, at most 20 ids per query.
-- **Persistence:** dispute cases are saved to the JSON file, shared by everyone who reaches the server, and survive a restart. Single server process only. Delete the file to start fresh; `data/` is git-ignored.
+## Security notes
 
-## Tested hosts and findings
+- **No authentication.** Without `ALLOWED_HOSTS` only localhost Host and Origin values are accepted. With it, requests for a listed host are accepted from anyone and other hosts get `403`. A real deployment would need OAuth or an identity provider in front.
+- **CORS:** the server sends `Access-Control-Allow-Origin: *` (default `cors()`). The widget calls no external APIs, so it needs none.
+- **Input limits:** bodies up to 64 KB (`413` above), validated transaction ids, comments up to 500 characters, filters up to 80, at most 20 ids per query.
+- **Persistence:** dispute cases are saved to the JSON file, shared by everyone who reaches the server, single process only. Delete the file to start fresh; `data/` is git-ignored.
 
-| Host                      | Result                                                                                                                       |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `basic-host`              | Works.                                                                                                                       |
-| Claude (custom connector) | Works without authentication. Earlier tests used an API key header, since removed.                                           |
-| VS Code Copilot           | Works: the view renders, and the dispute flow and the disputes list work. Earlier failures were setup errors (see findings). |
-| ChatGPT                   | Renders on the first call; the dispute flow and the disputes list work. Requires no authentication.                          |
-| Gemini                    | Connects without OAuth credentials and calls `show-spending-insights`; the widget is not requested or shown in our test.     |
+## Tested hosts
 
-- **A widget only renders when the model calls a tool linked to the view.** If the answer can come from earlier context, the model replies in text. This is why `show-disputes` exists.
-- **Theme:** `prefers-color-scheme` inside the iframe follows the operating system, not the host, which made text and dropdowns unreadable in a dark VS Code on a light Windows theme. The widget now applies the host's theme variables, and the theme matched in Claude, ChatGPT and VS Code.
-- **ChatGPT authentication:** the custom-server dialog offers OAuth, no authentication, or both, with no static key or header, so the demo runs without authentication. A real deployment would need OAuth.
-- **ChatGPT answer layer:** after opening the view, the model also wrote its own formatted answer (cards, charts, recommendations) from the tool's data, so the view was not the only visual output. In Claude the answer was a short text.
-- **Gemini:** the server log shows `tools/call` but no `resources/read`, so the `ui://` view was never requested. Gemini drew its own chart and sliders from the text result, and its figures did not agree with each other. Other Gemini surfaces were not checked.
-- **VS Code first call:** one run failed with `[MCP App] Error loading app ... No MCP host initialized` and showed text; it worked later in a normal chat. A first-call race is a hypothesis, not confirmed. The widget can also be hidden inside a collapsed "Completed N steps" group.
-- **VS Code setup errors look like a missing tool.** When the server was not connected, Copilot answered that the tool was not available and its agent read `server.ts` instead. The causes were a URL without `/mcp` (`404`) and a server started without `ALLOWED_HOSTS` (`403 Invalid Host`); both appear only in the VS Code server log, not in the chat.
+| Host            | Result                                                                  |
+| --------------- | ----------------------------------------------------------------------- |
+| `basic-host`    | Works.                                                                  |
+| Claude          | Works.                                                                  |
+| VS Code Copilot | Works.                                                                  |
+| ChatGPT (web)   | Works. The model also writes its own formatted answer next to the view. |
+| Gemini          | Tool is called; the widget is not requested or shown.                   |
 
 ## Troubleshooting
 
-- **`403` through the tunnel:** the server was started without `ALLOWED_HOSTS`, or `ALLOWED_HOSTS` does not match the current tunnel host (it changes on every tunnel restart). ChatGPT shows this as "The MCP server denied access".
+- **`403` through the tunnel:** the server was started without `ALLOWED_HOSTS`, or it does not match the current tunnel host. ChatGPT shows this as "The MCP server denied access".
 - **`404` "Cannot GET /":** the URL is missing `/mcp`.
-- **"Could not reach the server" in the widget:** the server or the tunnel is stopped. Restart it and choose **Try again**.
+- **"Could not reach the server" in the widget:** the server or tunnel is stopped. Restart it and choose **Try again**.
 - **Text only, no view:** the model did not call a tool linked to the view. Ask again or name the tool.
-- **VS Code chat says the tool is not available:** the server did not connect. In **MCP: List Servers** choose **Show Output** and look for a `404` (URL without `/mcp`) or a `403 Invalid Host` (see above).
+- **VS Code says the tool is not available:** the server did not connect. In **MCP: List Servers** choose **Show Output** and look for a `404` or `403 Invalid Host`; neither appears in the chat.
 
 ## Demo script
 
-1. "How has my spending looked over the last six months? Anything unusual?" The view opens with the chart and three flagged items.
+1. Ask the example prompt. The view opens with the chart and three flagged items.
 2. Click **Review** on the Bistro Verde duplicate, open one payment, **Dispute this payment**, confirm.
 3. Open **Disputes**: the case shows as Open.
 4. In chat: "Show my disputes." The view opens on the Disputes tab.
